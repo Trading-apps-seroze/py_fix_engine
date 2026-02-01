@@ -24,6 +24,8 @@ class FixClient:
         self.reconnect_thread = None 
         self.retry_interval = 1 # 1s 
 
+        self.listener_thread = None 
+
         self.seq_file = f"CLIENT-1.seq"
         self.out_seq_num = self._load_seq()
 
@@ -43,7 +45,7 @@ class FixClient:
 
     def send_logon(self):
         """Constructs and sends the initial Logon (35=A) message."""
-        logon = FixMessage(msg_type="A", sender_id="SENDER_COMP_ID", target_id="TARGET_COMP_ID")
+        logon = FixMessage(msg_type="A", sender_id="SENDER_COMP_ID", target_id="")
         # Tag 98: 0 = None/Other (Encryption method)
         logon.add_tag(98, "0") 
         # Tag 108: Heartbeat interval in seconds
@@ -51,7 +53,7 @@ class FixClient:
         self.send_message(logon)
 
 
-    def start_heartbeat(self): 
+    def _start_heartbeat(self): 
         """Starts the background thread"""
         self.hb_thread = threading.Thread(target=self._heartbeat_loop, daemon=True) 
         self.hb_thread.start()
@@ -69,6 +71,13 @@ class FixClient:
                 self.send_message(hb_msg)
                 print(f"DEBUG: Sent Heartbeat")
 
+    def start_client(self): 
+        """Starts the connection manager thread."""
+        if self.reconnect_thread is None or not self.reconnect_thread.is_alive():
+            self.reconnect_thread = threading.Thread(target=self._connection_manager, daemon=True)
+            self.reconnect_thread.start()
+            print("Connection Manager started...")
+
 
     def _connection_manager(self): 
         while True: 
@@ -81,15 +90,24 @@ class FixClient:
                     # Production Tip: Increase interval here for exponential backoff
                     continue
 
+            # reconnect after 1s 
+            time.sleep(1)
 
-    def connect(self):
+
+    def _connect(self):
         try: 
-            self.socket.connect((self.host, self.port)) 
+            # Initialize a fresh socket each time as we cannot use socket object after 
+            # failure, we have to garbage collect this 
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((self.host, self.port))
             self.socket.settimeout(5)  # Give up after 5 seconds
+
             self.is_running = True 
-            self.start_heartbeat() # start hb background thread 
-            listener_thread = threading.Thread(target = self._listen, daemon=True)
-            listener_thread.start()
+
+            self._start_heartbeat() # start hb background thread 
+            
+            self.listener_thread = threading.Thread(target = self._listen, daemon=True)
+            self.listener_thread.start()
 
             print(f"Connected to {self.host}:{self.port}")
 
