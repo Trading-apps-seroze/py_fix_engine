@@ -20,7 +20,7 @@ class FixClient:
         self.hb_thread = None 
         self.heartbeat_interval = 1 # 1s 
 
-        self.last_sent_time = None 
+        self.last_sent_time = 0 
         self.reconnect_thread = None 
         self.retry_interval = 1 # 1s 
 
@@ -43,7 +43,7 @@ class FixClient:
 
     def send_logon(self):
         """Constructs and sends the initial Logon (35=A) message."""
-        logon = FixMessage(msg_type="A", sender_id="MY_CLIENT", target_id="SERVER")
+        logon = FixMessage(msg_type="A", sender_id="SENDER_COMP_ID", target_id="TARGET_COMP_ID")
         # Tag 98: 0 = None/Other (Encryption method)
         logon.add_tag(98, "0") 
         # Tag 108: Heartbeat interval in seconds
@@ -62,9 +62,12 @@ class FixClient:
         print(f"Heartbeat thread started (Interval: {self.heartbeat_interval}s)")
         while self.is_running:
             time.sleep(self.heartbeat_interval)
-            hb_msg = FixMessage(msg_type="0", sender_id="MY_CLIENT", target_id="SERVER")
-            self.send_message(hb_msg)
-            print(f"DEBUG: Sent Heartbeat")
+            elapsed = time.time() - self.last_sent_time 
+
+            if elapsed >= self.heartbeat_interval:
+                hb_msg = FixMessage(msg_type="0", sender_id="MY_CLIENT", target_id="SERVER")
+                self.send_message(hb_msg)
+                print(f"DEBUG: Sent Heartbeat")
 
 
     def _connection_manager(self): 
@@ -116,6 +119,7 @@ class FixClient:
             raw_fix_message = fix_message.encode() # returns str 
             
             self.socket.sendall(raw_fix_message.encode())
+            self.last_sent_time = time.time()
             print(f"SENT: {raw_fix_message.replace(f'{FixMessage.SOH}', '|')}")
 
     def _listen(self):
