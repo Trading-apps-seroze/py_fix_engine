@@ -1,6 +1,7 @@
 
 # Phase 1 
 
+```
 [X] Write a socket client 
 [X] Write the Logon Generator 
 [X] Write the Heartbeat Loop 
@@ -15,6 +16,7 @@
 [] Handle gap fill 
 [] Trigger shutdown if we are not able to logon after 100 attempts 
 [] Handle repeating groups 
+```
 
  ######## 
 
