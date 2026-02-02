@@ -8,7 +8,7 @@
 [X] Write the listener 
 [X] Write a socket server 
 [X] Add outgoing_seq_num 
-[] Add socket.retry() in a seperate thread 
+[X] Handle server connection drops 
 [X] Make heart_beat only send only if it didn't see any incoming message from server in last 1s 
 [X] Session State Persistence 
 [X] Add sending_time 
