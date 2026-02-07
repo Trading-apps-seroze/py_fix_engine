@@ -17,10 +17,11 @@ class FixTag:
     PASSWORD           = 554 
 
     # --- Sequence Reset & Resend ---
-    BEGIN_SEQ_NO       = 7   
-    END_SEQ_NO         = 16  
-    NEW_SEQ_NO         = 36  
-    GAP_FILL_FLAG      = 123 
+    BEGIN_SEQ_NO       = 7
+    END_SEQ_NO         = 16
+    NEW_SEQ_NO         = 36
+    GAP_FILL_FLAG      = 123
+    POSS_DUP_FLAG      = 43 
 
     # --- Common Application Tags (New Order Single) ---
     CL_ORD_ID          = 11  # Client Order ID

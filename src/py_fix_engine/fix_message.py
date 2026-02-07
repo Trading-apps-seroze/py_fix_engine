@@ -20,8 +20,10 @@ class FixMessage:
             49: sender_id,
             56: target_id,
             # Note: Tag 8 (BeginString) and 9 (BodyLength) are usually added during encoding
-            8: "FIX.4.2" 
+            8: "FIX.4.2"
         }
+        # Repeating groups: {count_tag: [{tag: value, ...}, ...]}
+        self.groups = {}
 
     def add_tag(self, tag: int, value: str):
         """Adds or updates a tag in the message."""
@@ -30,6 +32,19 @@ class FixMessage:
 
     def get_tag(self, tag_num: int):
         return self.tags.get(tag_num)
+
+    def add_group(self, count_tag, entries):
+        """Add a repeating group.
+
+        Args:
+            count_tag: The NoXxx tag (e.g. 453 for NoPartyIDs).
+            entries: List of dicts [{tag: value, ...}, ...].
+        """
+        self.groups[count_tag] = entries
+
+    def get_group(self, count_tag):
+        """Return the list of entry dicts for a repeating group, or None."""
+        return self.groups.get(count_tag)
 
     @staticmethod
     def calculate_checksum(raw_message: str) -> int: 
@@ -64,11 +79,18 @@ class FixMessage:
         expected = FixMessage.calculate_checksum(body_to_check)
         return expected == received_checksum 
 
-    def encode(self) -> str: 
+    def encode(self) -> str:
 
         # 1. Manually build the string from the tags dictionary
         # We skip Tag 10 because we're about to calculate it
         raw_content = "".join([f"{tag}={val}{FixMessage.SOH}" for tag, val in self.tags.items() if tag != "10"])
 
-        check_sum = FixMessage.calculate_checksum(raw_content) 
+        # 2. Append repeating groups
+        for count_tag, entries in self.groups.items():
+            raw_content += f"{count_tag}={len(entries)}{FixMessage.SOH}"
+            for entry in entries:
+                for tag, val in entry.items():
+                    raw_content += f"{tag}={val}{FixMessage.SOH}"
+
+        check_sum = FixMessage.calculate_checksum(raw_content)
         return f"{raw_content}{FixMessage.SOH}10={check_sum}{FixMessage.SOH}"
